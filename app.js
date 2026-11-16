@@ -759,11 +759,13 @@ function foodieFridge() {
 
     ${list.length ? list.map(x => {
       const d = x.expire ? daysLeft(x.expire) : null;
-      let badge = '<span class="exp-badge exp-ok">正常</span>';
+      let badge = '<span class="exp-badge exp-ok">常备</span>';
       if (!state.settings.notifyExpire) badge = '';
       else if (d === null) badge = '<span class="exp-badge exp-ok">常备</span>';
       else if (d < 0) badge = '<span class="exp-badge exp-bad">已过期</span>';
-      else if (d <= 2) badge = `<span class="exp-badge exp-soon">${d === 0 ? '今天到期' : d + ' 天后到期'}</span>`;
+      else if (d === 0) badge = '<span class="exp-badge exp-soon">今天到期</span>';
+      else if (d <= 2) badge = `<span class="exp-badge exp-soon">还剩 ${d} 天</span>`;
+      else badge = `<span class="exp-badge exp-ok">还剩 ${d} 天</span>`;
       return `<div class="card">
         <div class="fridge-item">
           <div class="mini" style="width:42px;height:42px;border-radius:12px;background:#faf2df;display:flex;align-items:center;justify-content:center;font-size:20px">${x.storage === '冷冻' ? '❄️' : x.storage === '常温' ? '🥫' : '🧊'}</div>
