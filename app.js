@@ -2,7 +2,7 @@
    数据全部存在浏览器 localStorage，换设备/清缓存会丢。 */
 
 const KEY = 'diancai_v1';
-const DATA_VER = 8;
+const DATA_VER = 9;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -21,6 +21,27 @@ function daysLeft(dateStr) {
   const a = new Date(todayStr() + 'T00:00:00');
   const b = new Date(dateStr + 'T00:00:00');
   return Math.round((b - a) / 86400000);
+}
+/* 保质期按买回来那天算，天数按食材分：冷冻统一 90 天，其余照常见保鲜期 */
+const SHELF_DAYS = {
+  '鸡蛋': 21, '酸奶': 21,
+  '维他奶': 180, '椰汁': 180, '大米': 180, '面条': 180, '酸菜': 180,
+  '香蕉': 5, '柿子': 7, '番茄': 5, '玉米': 5, '鸡枞菇': 5,
+  '苹果': 14, '豆干': 7,
+  '土豆': 30, '南瓜': 30, '蜜薯': 30, '沙葛': 30
+};
+function shelfLife(item) {
+  const { name = '', storage = '常温', cat = '' } = item || {};
+  if (storage === '冷冻') return 90;
+  if (SHELF_DAYS[name]) return SHELF_DAYS[name];
+  if (cat === '海鲜') return 1;
+  if (cat === '肉禽蛋') return 2;
+  if (cat === '叶菜') return 3;
+  if (cat === '瓜豆') return storage === '冷藏' ? 5 : 7;
+  if (cat === '果饮') return storage === '冷藏' ? 7 : 5;
+  if (cat === '主食') return 180;
+  if (cat === '配菜') return storage === '冷藏' ? 7 : 60;
+  return storage === '冷藏' ? 5 : 15;
 }
 function mealNow() {
   const h = new Date().getHours();
@@ -42,7 +63,7 @@ const EMOJIS = ['🍲','🍜','🍗','🍖','🥩','🥬','🥕','🍅','🥔','
 
 function defaultState() {
   const t = todayStr();
-  return {
+  const s = {
     ver: DATA_VER,
     profile: { cookName: '我', foodieName: '晶晶', role: 'foodie' },
     ui: {
@@ -296,6 +317,12 @@ function defaultState() {
     ],
     requests: []
   };
+  /* 食材都带购买日，没填保质到就按购买日 + 保鲜天数算出来 */
+  s.fridge.forEach(x => {
+    x.bought = x.bought || t;
+    if (!x.expire) x.expire = addDays(x.bought, shelfLife(x));
+  });
+  return s;
 }
 
 /* ---------------- 存取 ---------------- */
@@ -371,6 +398,13 @@ function load() {
           m.orders = [];
           m.basket = [];
         }
+        // v9：补上购买日（按 11-15 那张小票），没保质期的按购买日算出来
+        if (v < 9) {
+          m.fridge.forEach(x => {
+            x.bought = x.expire ? addDays(x.expire, -shelfLife(x)) : '2026-11-15';
+            if (!x.expire) x.expire = addDays(x.bought, shelfLife(x));
+          });
+        }
       }
       return m;
     }
@@ -386,31 +420,12 @@ const findDish = id => state.dishes.find(d => d.id === id);
 function findIng(name) {
   return state.fridge.find(x => x.name === name);
 }
-/* 保质期按买回来那天算，天数按食材分：冷冻统一 90 天，其余照常见保鲜期 */
-const SHELF_DAYS = {
-  '鸡蛋': 21, '酸奶': 21,
-  '维他奶': 180, '椰汁': 180, '大米': 180, '面条': 180, '酸菜': 180,
-  '香蕉': 5, '柿子': 7, '番茄': 5, '玉米': 5, '鸡枞菇': 5,
-  '苹果': 14, '豆干': 7,
-  '土豆': 30, '南瓜': 30, '蜜薯': 30, '沙葛': 30
-};
-function shelfLife(item) {
-  const { name = '', storage = '常温', cat = '' } = item || {};
-  if (storage === '冷冻') return 90;
-  if (SHELF_DAYS[name]) return SHELF_DAYS[name];
-  if (cat === '海鲜') return 1;
-  if (cat === '肉禽蛋') return 2;
-  if (cat === '叶菜') return 3;
-  if (cat === '瓜豆') return storage === '冷藏' ? 5 : 7;
-  if (cat === '果饮') return storage === '冷藏' ? 7 : 5;
-  if (cat === '主食') return 180;
-  if (cat === '配菜') return storage === '冷藏' ? 7 : 60;
-  return storage === '冷藏' ? 5 : 15;
-}
 /* 冰箱只记有没有，所以「补进来」就是确保这一行在 */
 function addIng(name, extra) {
   if (!findIng(name)) {
-    state.fridge.push({ id: uid(), name, qty: 1, unit: '', storage: '常温', cat: '', expire: '', ...(extra || {}) });
+    const it = { id: uid(), name, qty: 1, unit: '', storage: '常温', cat: '', bought: todayStr(), expire: '', ...(extra || {}) };
+    if (!it.expire) it.expire = addDays(it.bought, shelfLife(it));
+    state.fridge.push(it);
   }
 }
 /* 吃完了：移出冰箱，进菜篮的待补清单（记住原来放冰箱哪一格、哪个分类） */
@@ -431,7 +446,10 @@ function basketBack(id) {
   if (!b) return;
   const storage = b.storage || '常温';
   state.basket = state.basket.filter(x => x.id !== id);
-  addIng(b.name, { storage, cat: b.cat || '', expire: addDays(todayStr(), shelfLife({ name: b.name, storage, cat: b.cat })) });
+  addIng(b.name, {
+    storage, cat: b.cat || '', bought: todayStr(),
+    expire: addDays(todayStr(), shelfLife({ name: b.name, storage, cat: b.cat }))
+  });
   save(); render(); toast(`「${b.name}」放回冰箱了`);
 }
 /* 冰箱只记「有没有」，不记数量：有这个食材就不算缺 */
@@ -771,7 +789,7 @@ function foodieFridge() {
           <div class="mini" style="width:42px;height:42px;border-radius:12px;background:#faf2df;display:flex;align-items:center;justify-content:center;font-size:20px">${x.storage === '冷冻' ? '❄️' : x.storage === '常温' ? '🥫' : '🧊'}</div>
           <div style="flex:1;min-width:0">
             <div style="font-weight:600">${esc(x.name)}</div>
-            <div class="muted">${esc(x.storage || '常温')}${x.cat ? ' · ' + esc(x.cat) : ''}${x.expire ? ' · ' + esc(x.expire) : ''}</div>
+            <div class="muted">${esc(x.storage || '常温')}${x.cat ? ' · ' + esc(x.cat) : ''}${x.bought ? ' · 买于 ' + esc(x.bought.slice(5).replace('-', '/')) : ''}</div>
           </div>
           ${badge}
         </div>
@@ -1321,7 +1339,10 @@ function basketToFridge() {
   const list = state.basket.filter(b => !b.restock && b.date === state.ui.basketDate && (state.ui.basketMeal === '全天' || b.meal === state.ui.basketMeal));
   const bought = list.filter(b => b.bought);
   if (!bought.length) return toast('先勾选买好的食材');
-  bought.forEach(b => addIng(b.name, { storage: '冷藏', cat: '配菜', expire: addDays(todayStr(), shelfLife({ name: b.name, storage: '冷藏', cat: '配菜' })) }));
+  bought.forEach(b => addIng(b.name, {
+    storage: '冷藏', cat: '配菜', bought: todayStr(),
+    expire: addDays(todayStr(), shelfLife({ name: b.name, storage: '冷藏', cat: '配菜' }))
+  }));
   state.basket = state.basket.filter(b => !bought.includes(b));
   save(); render(); toast(`放进冰箱 ${bought.length} 样`);
 }
@@ -1368,7 +1389,7 @@ document.addEventListener('click', e => {
     if (old) {
       if (expire) old.expire = expire;
     } else {
-      state.fridge.push({ id: uid(), name, qty: 1, unit: '', storage, cat: '', expire });
+      state.fridge.push({ id: uid(), name, qty: 1, unit: '', storage, cat: '', bought: todayStr(), expire });
     }
     save(); closeSheet(); render(); toast('已放进冰箱');
   }
