@@ -386,6 +386,12 @@ const findDish = id => state.dishes.find(d => d.id === id);
 function findIng(name) {
   return state.fridge.find(x => x.name === name);
 }
+/* 保质期按买回来那天算：冷冻久一点，冷藏的菜肉短，常温居中 */
+function shelfLife(storage) {
+  if (storage === '冷冻') return 90;
+  if (storage === '冷藏') return 5;
+  return 15;
+}
 /* 冰箱只记有没有，所以「补进来」就是确保这一行在 */
 function addIng(name, extra) {
   if (!findIng(name)) {
@@ -404,12 +410,13 @@ function fridgeEaten(id) {
   });
   save(); render(); toast(`「${x.name}」进菜篮了`);
 }
-/* 买回来了：从菜篮拿回去，放回原来的格子和分类 */
+/* 买回来了：从菜篮拿回去，放回原来的格子和分类，保质期从今天重新算 */
 function basketBack(id) {
   const b = state.basket.find(x => x.id === id);
   if (!b) return;
+  const storage = b.storage || '常温';
   state.basket = state.basket.filter(x => x.id !== id);
-  addIng(b.name, { storage: b.storage || '常温', cat: b.cat || '' });
+  addIng(b.name, { storage, cat: b.cat || '', expire: addDays(todayStr(), shelfLife(storage)) });
   save(); render(); toast(`「${b.name}」放回冰箱了`);
 }
 /* 冰箱只记「有没有」，不记数量：有这个食材就不算缺 */
@@ -1256,7 +1263,7 @@ function basketToFridge() {
   const list = state.basket.filter(b => !b.restock && b.date === state.ui.basketDate && (state.ui.basketMeal === '全天' || b.meal === state.ui.basketMeal));
   const bought = list.filter(b => b.bought);
   if (!bought.length) return toast('先勾选买好的食材');
-  bought.forEach(b => addIng(b.name, { storage: '冷藏', cat: '配菜', expire: addDays(todayStr(), 5) }));
+  bought.forEach(b => addIng(b.name, { storage: '冷藏', cat: '配菜', expire: addDays(todayStr(), shelfLife('冷藏')) }));
   state.basket = state.basket.filter(b => !bought.includes(b));
   save(); render(); toast(`放进冰箱 ${bought.length} 样`);
 }
@@ -1298,7 +1305,7 @@ document.addEventListener('click', e => {
     const name = ($('#s-name')?.value || '').trim();
     if (!name) return toast('食材名不能空');
     const storage = $('#s-storage').value;
-    const expire = $('#s-expire').value || '';
+    const expire = $('#s-expire').value || addDays(todayStr(), shelfLife(storage));
     const old = findIng(name);
     if (old) {
       if (expire) old.expire = expire;
