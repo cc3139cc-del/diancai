@@ -386,39 +386,39 @@ const findDish = id => state.dishes.find(d => d.id === id);
 function findIng(name) {
   return state.fridge.find(x => x.name === name);
 }
-function addIng(name, qty, unit) {
-  const s = findIng(name);
-  if (s) s.qty = Number(s.qty) + Number(qty);
-  else state.fridge.push({ id: uid(), name, qty: Number(qty), unit, storage: '常温', cat: '', expire: '' });
+/* 冰箱只记有没有，所以「补进来」就是确保这一行在 */
+function addIng(name, extra) {
+  if (!findIng(name)) {
+    state.fridge.push({ id: uid(), name, qty: 1, unit: '', storage: '常温', cat: '', expire: '', ...(extra || {}) });
+  }
 }
+/* 吃完了：移出冰箱，进菜篮的待补清单（记住原来放冰箱哪一格、哪个分类） */
+function fridgeEaten(id) {
+  const x = state.fridge.find(s => s.id === id);
+  if (!x) return;
+  state.fridge = state.fridge.filter(s => s.id !== id);
+  state.basket.push({
+    id: uid(), name: x.name, qty: 1, unit: '', price: 0,
+    storage: x.storage || '常温', cat: x.cat || '',
+    restock: true, bought: false, date: todayStr(), meal: '全天'
+  });
+  save(); render(); toast(`「${x.name}」进菜篮了`);
+}
+/* 买回来了：从菜篮拿回去，放回原来的格子和分类 */
+function basketBack(id) {
+  const b = state.basket.find(x => x.id === id);
+  if (!b) return;
+  state.basket = state.basket.filter(x => x.id !== id);
+  addIng(b.name, { storage: b.storage || '常温', cat: b.cat || '' });
+  save(); render(); toast(`「${b.name}」放回冰箱了`);
+}
+/* 冰箱只记「有没有」，不记数量：有这个食材就不算缺 */
 function dishMiss(d) {
   const miss = [];
   (d.ingredients || []).forEach(ing => {
-    const s = findIng(ing.name);
-    if (!s) miss.push({ name: ing.name, need: ing.qty, unit: ing.unit });
-    else if (s.unit === ing.unit && Number(s.qty) < Number(ing.qty)) miss.push({ name: ing.name, need: ing.qty, unit: ing.unit, have: s.qty });
+    if (!findIng(ing.name)) miss.push({ name: ing.name, need: ing.qty, unit: ing.unit });
   });
   return miss;
-}
-function consume(d, times) {
-  (d.ingredients || []).forEach(ing => {
-    const s = findIng(ing.name);
-    if (!s || s.unit !== ing.unit) return;   // 瓶装油不会被当成「1 勺」扣掉
-    s.qty = Number(s.qty) - Number(ing.qty) * times;
-  });
-  state.fridge = state.fridge.filter(s => Number(s.qty) > 0);
-}
-/* 退单时只把当初真扣掉的数量加回去 */
-function restoreItem(o, it) {
-  const d = findDish(it.dishId) || state.dishes.find(x => x.name === it.name);
-  if (!d) return;
-  (d.ingredients || []).forEach(ing => {
-    const s = findIng(ing.name);
-    if (s && s.unit === ing.unit) s.qty = Number(s.qty) + Number(ing.qty);
-  });
-}
-function restoreOrder(o) {
-  o.items.forEach(it => { if (it.status !== 'canceled') restoreItem(o, it); });
 }
 /* 只统计「已完成」：单子里剩下的菜全点完成才算一单，取消掉的不算 */
 function doneInfo() {
@@ -619,7 +619,8 @@ function foodieOrders() {
 }
 
 function foodieBasket() {
-  const list = state.basket.filter(b => b.date === state.ui.basketDate && (state.ui.basketMeal === '全天' || b.meal === state.ui.basketMeal));
+  const restock = state.basket.filter(b => b.restock);
+  const list = state.basket.filter(b => !b.restock && b.date === state.ui.basketDate && (state.ui.basketMeal === '全天' || b.meal === state.ui.basketMeal));
   const bought = list.filter(b => b.bought).length;
   const total = list.reduce((n, b) => n + Number(b.price || 0) * Number(b.qty || 0), 0);
   const meals = ['全天', '早餐', '午餐', '晚餐', '下午茶', '夜宵'];
@@ -628,6 +629,19 @@ function foodieBasket() {
       <input type="date" id="basket-date" value="${state.ui.basketDate}" style="border:1px solid var(--line);border-radius:10px;padding:6px 8px;background:#fff" />
       <button class="pill gold" data-act="basket-add">＋ 添加食材</button>
     </div>
+    ${restock.length ? `
+    <h3 style="margin:4px 0 8px">要补货 · 冰箱吃完了的</h3>
+    ${restock.map(b => `
+      <div class="card">
+        <div class="basket-item">
+          <div style="flex:1;min-width:0">
+            <div style="font-weight:600">${esc(b.name)}</div>
+            <div class="muted">${esc(b.storage || '常温')}${b.cat ? ' · ' + esc(b.cat) : ''}</div>
+          </div>
+          <button class="btn sm green" data-act="basket-back" data-v="${b.id}">买回来了</button>
+          <button class="btn sm" data-act="basket-del" data-v="${b.id}">删</button>
+        </div>
+      </div>`).join('')}` : ''}
     <div class="row wrap" style="margin-bottom:10px">
       ${meals.map(m => `<button class="chip ${state.ui.basketMeal === m ? 'red' : ''}" data-act="basket-meal" data-v="${m}" style="${state.ui.basketMeal === m ? 'border:1px solid #e6c9c2' : ''}">${m}</button>`).join('')}
     </div>
@@ -648,7 +662,7 @@ function foodieBasket() {
           </div>
           <button class="btn sm danger" data-act="basket-del" data-v="${b.id}">删</button>
         </div>
-      </div>`).join('') : emptyHTML('🧺', '菜篮空空的', '点右上角添加要买的食材')}
+      </div>`).join('') : (restock.length ? '' : emptyHTML('🧺', '菜篮空空的', '点右上角添加要买的食材'))}
   </div>
   ${list.length ? `<div class="basketbar">
       <div>已买 <b>${bought}</b>/${list.length}</div>
@@ -665,7 +679,8 @@ function fridgeStats() {
     if (d < 0) bad++;
     else if (d <= 2) soon++;
   });
-  return { all: state.fridge.length, soon, bad, restock: state.requests.length };
+  const pending = state.basket.filter(b => b.restock).length;
+  return { all: state.fridge.length, soon, bad, restock: state.requests.length + pending };
 }
 
 function foodieFridge() {
@@ -708,15 +723,14 @@ function foodieFridge() {
         <div class="fridge-item">
           <div class="mini" style="width:42px;height:42px;border-radius:12px;background:#faf2df;display:flex;align-items:center;justify-content:center;font-size:20px">${x.storage === '冷冻' ? '❄️' : x.storage === '常温' ? '🥫' : '🧊'}</div>
           <div style="flex:1;min-width:0">
-            <div style="font-weight:600">${esc(x.name)}${x.unit ? ` <span class="muted">× ${money(x.qty)}${esc(x.unit)}</span>` : ''}</div>
+            <div style="font-weight:600">${esc(x.name)}</div>
             <div class="muted">${esc(x.storage || '常温')}${x.cat ? ' · ' + esc(x.cat) : ''}${x.expire ? ' · ' + esc(x.expire) : ''}</div>
           </div>
           ${badge}
         </div>
         <div class="row" style="gap:6px;justify-content:flex-end;margin-top:6px">
-          <button class="btn sm" data-act="fridge-adj" data-v="${x.id}:-1">−</button>
-          <button class="btn sm" data-act="fridge-adj" data-v="${x.id}:1">＋</button>
-          <button class="btn sm danger" data-act="fridge-del" data-v="${x.id}">删</button>
+          <button class="btn sm primary" data-act="fridge-eaten" data-v="${x.id}">吃完了</button>
+          <button class="btn sm" data-act="fridge-del" data-v="${x.id}">删</button>
         </div>
       </div>`;
     }).join('') : emptyHTML('🧊', f.stat === 'restock' ? '没有待补货的食材' : '这里空空如也', '点右上角「添加食材」，或从菜篮买完放进来')}
@@ -732,14 +746,22 @@ function statCell(k, v, name) {
 }
 
 function restockListHTML() {
-  if (!state.requests.length) return '';
-  return `<div class="card" style="border-color:#f0d5cf;background:var(--red-soft)">
+  const pending = state.basket.filter(b => b.restock);
+  if (!state.requests.length && !pending.length) return '';
+  return `${pending.length ? `<div class="card" style="border-color:#f0d5cf;background:var(--red-soft)">
+    <h3>吃完了，等着买</h3>
+    ${pending.map(b => `<div class="row between" style="padding:6px 0">
+      <span>${esc(b.name)}</span>
+      <button class="btn sm green" data-act="basket-back" data-v="${b.id}">买回来了</button>
+    </div>`).join('')}
+  </div>` : ''}
+  ${state.requests.length ? `<div class="card" style="border-color:#f0d5cf;background:var(--red-soft)">
     <h3>催进货</h3>
     ${state.requests.map(r => `<div class="row between" style="padding:6px 0">
       <span>${esc(r.name)}</span>
       <button class="btn sm" data-act="req-done" data-v="${esc(r.name)}">已补货</button>
     </div>`).join('')}
-  </div>`;
+  </div>` : ''}`;
 }
 
 function emptyHTML(ico, a, b) {
@@ -970,9 +992,7 @@ document.addEventListener('click', e => {
     /* 订单 */
     case 'order-open': openOrderDetail(v); break;
     case 'order-del': {
-      if (!confirm('删掉这一单？食材会退回冰箱')) return;
-      const o = state.orders.find(x => x.id === v);
-      if (o) restoreOrder(o);
+      if (!confirm('删掉这一单？')) return;
       state.orders = state.orders.filter(x => x.id !== v);
       save(); render(); closeSheet(); toast('订单已删除');
       break;
@@ -982,13 +1002,6 @@ document.addEventListener('click', e => {
       const o = state.orders.find(x => x.id === oid);
       const it = o && o.items[Number(idx)];
       if (!it) break;
-      const wasCanceled = it.status === 'canceled';
-      if (s === 'canceled' && !wasCanceled) restoreItem(o, it);
-      if (s !== 'canceled' && wasCanceled) {
-        if (!confirm('这道菜重新做？食材会再扣一次')) { break; }
-        const d = findDish(it.dishId) || state.dishes.find(x => x.name === it.name);
-        if (d) consume(d, 1);
-      }
       it.status = s;
       save(); render();
       if (!$('#modal').classList.contains('hidden')) openOrderDetail(oid);
@@ -1011,22 +1024,16 @@ document.addEventListener('click', e => {
     case 'fridge-stor': state.ui.fridge.storage = (state.ui.fridge.storage === v ? '' : v); save(); render(); break;
     case 'fridge-cat': state.ui.fridge.cat = v; save(); render(); break;
     case 'fridge-del': state.fridge = state.fridge.filter(x => x.id !== v); save(); render(); break;
-    case 'fridge-adj': {
-      const [fid, delta] = v.split(':');
-      const f0 = state.fridge.find(x => x.id === fid);
-      if (f0) {
-        f0.qty = Number(f0.qty) + Number(delta);
-        if (f0.qty <= 0) state.fridge = state.fridge.filter(x => x !== f0);
-      }
-      save(); render(); break;
-    }
+    /* 吃完了：从冰箱拿走，同时进菜篮等着买 */
+    case 'fridge-eaten': fridgeEaten(v); break;
+    case 'basket-back': basketBack(v); break;
     case 'fridge-add': openFridgeAdd(); break;
     case 'toggle-notify': state.settings.notifyExpire = !state.settings.notifyExpire; save(); render(); break;
 
     /* 厨房 */
     case 'role': state.profile.role = v; save(); render(); toast(v === 'cook' ? '现在是厨师' : '现在是吃货'); break;
     case 'req-done': {
-      if (state.requests.find(x => x.name === v)) addIng(v, 1, findIng(v) ? findIng(v).unit : '个');
+      if (state.requests.find(x => x.name === v)) addIng(v);
       state.requests = state.requests.filter(x => x.name !== v);
       save(); render(); toast('已补进冰箱');
       break;
@@ -1106,7 +1113,6 @@ function submitOrder() {
   state.cart.forEach(c => {
     const d = findDish(c.dishId);
     for (let i = 0; i < c.qty; i++) items.push({ dishId: d.id, name: d.name, emoji: d.emoji, status: 'wait' });
-    consume(d, c.qty);
   });
   state.orders.unshift({
     id: uid(), date: state.ui.date, meal: state.ui.meal, note, createdAt: Date.now(), items
@@ -1247,17 +1253,10 @@ function openBasketAdd() {
 }
 
 function basketToFridge() {
-  const list = state.basket.filter(b => b.date === state.ui.basketDate && (state.ui.basketMeal === '全天' || b.meal === state.ui.basketMeal));
+  const list = state.basket.filter(b => !b.restock && b.date === state.ui.basketDate && (state.ui.basketMeal === '全天' || b.meal === state.ui.basketMeal));
   const bought = list.filter(b => b.bought);
   if (!bought.length) return toast('先勾选买好的食材');
-  bought.forEach(b => {
-    const old = state.fridge.find(x => x.name === b.name && x.unit === b.unit);
-    if (old) old.qty = Number(old.qty) + Number(b.qty);
-    else state.fridge.push({
-      id: uid(), name: b.name, qty: Number(b.qty), unit: b.unit,
-      storage: '冷藏', cat: '配菜', expire: addDays(todayStr(), 5)
-    });
-  });
+  bought.forEach(b => addIng(b.name, { storage: '冷藏', cat: '配菜', expire: addDays(todayStr(), 5) }));
   state.basket = state.basket.filter(b => !bought.includes(b));
   save(); render(); toast(`放进冰箱 ${bought.length} 样`);
 }
@@ -1265,10 +1264,6 @@ function basketToFridge() {
 function openFridgeAdd() {
   sheet(`<h2>添加食材</h2>
     <div class="field"><label>食材名</label><input id="s-name" placeholder="比如 鸡蛋" /></div>
-    <div class="row" style="gap:8px">
-      <div class="field" style="flex:1"><label>数量</label><input id="s-qty" type="number" min="0.5" step="0.5" value="1" /></div>
-      <div class="field" style="width:90px"><label>单位</label><select id="s-unit">${UNITS.map(u => `<option>${u}</option>`).join('')}</select></div>
-    </div>
     <div class="row" style="gap:8px">
       <div class="field" style="flex:1"><label>放在哪</label><select id="s-storage"><option>冷藏</option><option>冷冻</option><option>常温</option></select></div>
       <div class="field" style="flex:1"><label>保质到（可不填）</label><input id="s-expire" type="date" /></div>
@@ -1302,16 +1297,13 @@ document.addEventListener('click', e => {
   if (act === 'fridge-save') {
     const name = ($('#s-name')?.value || '').trim();
     if (!name) return toast('食材名不能空');
-    const qty = Number($('#s-qty').value) || 1;
-    const unit = $('#s-unit').value;
     const storage = $('#s-storage').value;
     const expire = $('#s-expire').value || '';
-    const old = state.fridge.find(x => x.name === name && x.unit === unit);
+    const old = findIng(name);
     if (old) {
-      old.qty = Number(old.qty) + qty;
       if (expire) old.expire = expire;
     } else {
-      state.fridge.push({ id: uid(), name, qty, unit, storage, cat: '', expire });
+      state.fridge.push({ id: uid(), name, qty: 1, unit: '', storage, cat: '', expire });
     }
     save(); closeSheet(); render(); toast('已放进冰箱');
   }
