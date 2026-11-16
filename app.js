@@ -386,11 +386,26 @@ const findDish = id => state.dishes.find(d => d.id === id);
 function findIng(name) {
   return state.fridge.find(x => x.name === name);
 }
-/* 保质期按买回来那天算：冷冻久一点，冷藏的菜肉短，常温居中 */
-function shelfLife(storage) {
+/* 保质期按买回来那天算，天数按食材分：冷冻统一 90 天，其余照常见保鲜期 */
+const SHELF_DAYS = {
+  '鸡蛋': 21, '酸奶': 21,
+  '维他奶': 180, '椰汁': 180, '大米': 180, '面条': 180, '酸菜': 180,
+  '香蕉': 5, '柿子': 7, '番茄': 5, '玉米': 5, '鸡枞菇': 5,
+  '苹果': 14, '豆干': 7,
+  '土豆': 30, '南瓜': 30, '蜜薯': 30, '沙葛': 30
+};
+function shelfLife(item) {
+  const { name = '', storage = '常温', cat = '' } = item || {};
   if (storage === '冷冻') return 90;
-  if (storage === '冷藏') return 5;
-  return 15;
+  if (SHELF_DAYS[name]) return SHELF_DAYS[name];
+  if (cat === '海鲜') return 1;
+  if (cat === '肉禽蛋') return 2;
+  if (cat === '叶菜') return 3;
+  if (cat === '瓜豆') return storage === '冷藏' ? 5 : 7;
+  if (cat === '果饮') return storage === '冷藏' ? 7 : 5;
+  if (cat === '主食') return 180;
+  if (cat === '配菜') return storage === '冷藏' ? 7 : 60;
+  return storage === '冷藏' ? 5 : 15;
 }
 /* 冰箱只记有没有，所以「补进来」就是确保这一行在 */
 function addIng(name, extra) {
@@ -416,7 +431,7 @@ function basketBack(id) {
   if (!b) return;
   const storage = b.storage || '常温';
   state.basket = state.basket.filter(x => x.id !== id);
-  addIng(b.name, { storage, cat: b.cat || '', expire: addDays(todayStr(), shelfLife(storage)) });
+  addIng(b.name, { storage, cat: b.cat || '', expire: addDays(todayStr(), shelfLife({ name: b.name, storage, cat: b.cat })) });
   save(); render(); toast(`「${b.name}」放回冰箱了`);
 }
 /* 冰箱只记「有没有」，不记数量：有这个食材就不算缺 */
@@ -541,9 +556,32 @@ function visibleDishes() {
   });
 }
 
+/* 未分类页里的食材池：饮料、水果、调料不算，免得一堆瓶瓶罐罐 */
+const NOT_MIXABLE = ['食用油', '花椒油', '辣椒酱', '孜然粉', '椒盐粉', '白胡椒粉',
+  '生抽', '醋', '料酒', '盐', '淀粉', '蚝油', '花椒粉', '鸡精', '白糖', '冰糖', '蜂蜜'];
+function mixIngredients() {
+  return state.fridge.filter(x => x.cat !== '果饮' && !NOT_MIXABLE.includes(x.name));
+}
+function mixHTML() {
+  const list = mixIngredients();
+  if (!list.length) return '';
+  return `<div class="section-title">🥕 食材混搭（${list.length}）</div>
+    <div class="muted" style="padding:0 14px 8px">不照着菜谱来，想拿什么就点什么，凑成一样菜下单</div>
+    <div class="row wrap" style="padding:0 14px 12px">
+      ${list.map(x => {
+        const c = state.cart.find(k => cartKey(k) === 'ing:' + x.name);
+        return `<button class="chip ${c ? 'red' : ''}" data-act="mix-add" data-v="${esc(x.name)}">${esc(x.name)}${c ? ` ×${c.qty}` : ' ＋'}</button>`;
+      }).join('')}
+    </div>`;
+}
 function dishGridHTML() {
   const list = visibleDishes();
   const cat = state.categories.find(c => c.id === state.ui.cat);
+  const isMix = state.ui.cat === 'other' && !state.ui.search.trim();
+  if (isMix) {
+    return `${list.length ? `<div class="section-title">📦 自己加的菜（${list.length}）</div>
+      <div class="grid">${list.map(dishCard).join('')}</div>` : ''}${mixHTML()}`;
+  }
   if (!list.length) return `<div class="empty"><span class="big">🍽️</span>这个分类还空着<br>点上方「添加菜品」加一道</div>`;
   return `<div class="section-title">${cat ? cat.emoji + ' ' + esc(cat.name) : '🔍 搜索结果'}（${list.length}）</div>
     <div class="grid">${list.map(dishCard).join('')}</div>`;
@@ -951,6 +989,7 @@ document.addEventListener('click', e => {
     /* 点菜 */
     case 'cat': state.ui.cat = v; state.ui.search = ''; save(); render(); break;
     case 'cart-add': addToCart(v); break;
+    case 'mix-add': addIngToCart(v); break;
     case 'open-cart': openCart(); break;
     case 'random': {
       const ok = state.dishes.filter(d => !d.pending);
@@ -988,9 +1027,9 @@ document.addEventListener('click', e => {
     case 'close': closeSheet(); break;
 
     /* 购物车 / 下单 */
-    case 'cart-plus': { const c = state.cart.find(x => x.dishId === v); if (c) c.qty++; save(); render(); openCart(); break; }
+    case 'cart-plus': { const c = state.cart.find(x => cartKey(x) === v); if (c) c.qty++; save(); render(); openCart(); break; }
     case 'cart-minus': {
-      const c = state.cart.find(x => x.dishId === v);
+      const c = state.cart.find(x => cartKey(x) === v);
       if (c) { c.qty--; if (c.qty <= 0) state.cart = state.cart.filter(x => x !== c); }
       save(); if (state.cart.length) openCart(); else closeSheet(); render(); break;
     }
@@ -1082,24 +1121,40 @@ document.addEventListener('input', e => {
 function addToCart(id) {
   const d = findDish(id);
   if (!d) return;
-  const c = state.cart.find(x => x.dishId === id);
+  const c = state.cart.find(x => cartKey(x) === id);
   if (c) c.qty++;
-  else state.cart.push({ dishId: id, qty: 1 });
+  else state.cart.push({ key: id, dishId: id, name: d.name, emoji: d.emoji, qty: 1 });
   save(); render();
   toast(`已加「${d.name}」`);
+}
+/* 未分类页的食材混搭：单独一样食材也能进购物车，不挂菜谱 */
+function addIngToCart(name) {
+  const k = 'ing:' + name;
+  const c = state.cart.find(x => cartKey(x) === k);
+  if (c) c.qty++;
+  else state.cart.push({ key: k, name, emoji: '🥢', qty: 1 });
+  save(); render();
+  toast(`已加「${name}」`);
+}
+function cartKey(c) { return c.key || c.dishId; }
+function cartName(c) {
+  return c.name || (findDish(c.dishId) || {}).name || '食材';
+}
+function cartEmoji(c) {
+  return c.emoji || (findDish(c.dishId) || {}).emoji || '🥢';
 }
 
 function openCart() {
   if (!state.cart.length) return toast('购物车是空的');
   const rows = state.cart.map(c => {
-    const d = findDish(c.dishId);
+    const k = cartKey(c);
     return `<div class="dishline">
-      <div class="mini">${d.emoji || '🍲'}</div>
-      <div style="flex:1"><div style="font-weight:600">${esc(d.name)}</div></div>
+      <div class="mini">${cartEmoji(c)}</div>
+      <div style="flex:1"><div style="font-weight:600">${esc(cartName(c))}</div></div>
       <div class="row" style="gap:6px">
-        <button class="btn sm" data-act="cart-minus" data-v="${d.id}">−</button>
+        <button class="btn sm" data-act="cart-minus" data-v="${esc(k)}">−</button>
         <b>${c.qty}</b>
-        <button class="btn sm" data-act="cart-plus" data-v="${d.id}">＋</button>
+        <button class="btn sm" data-act="cart-plus" data-v="${esc(k)}">＋</button>
       </div>
     </div>`;
   }).join('');
@@ -1118,8 +1173,9 @@ function submitOrder() {
   const note = ($('#order-note')?.value || '').trim();
   const items = [];
   state.cart.forEach(c => {
-    const d = findDish(c.dishId);
-    for (let i = 0; i < c.qty; i++) items.push({ dishId: d.id, name: d.name, emoji: d.emoji, status: 'wait' });
+    for (let i = 0; i < c.qty; i++) {
+      items.push({ dishId: c.dishId || '', name: cartName(c), emoji: cartEmoji(c), status: 'wait' });
+    }
   });
   state.orders.unshift({
     id: uid(), date: state.ui.date, meal: state.ui.meal, note, createdAt: Date.now(), items
@@ -1263,7 +1319,7 @@ function basketToFridge() {
   const list = state.basket.filter(b => !b.restock && b.date === state.ui.basketDate && (state.ui.basketMeal === '全天' || b.meal === state.ui.basketMeal));
   const bought = list.filter(b => b.bought);
   if (!bought.length) return toast('先勾选买好的食材');
-  bought.forEach(b => addIng(b.name, { storage: '冷藏', cat: '配菜', expire: addDays(todayStr(), shelfLife('冷藏')) }));
+  bought.forEach(b => addIng(b.name, { storage: '冷藏', cat: '配菜', expire: addDays(todayStr(), shelfLife({ name: b.name, storage: '冷藏', cat: '配菜' })) }));
   state.basket = state.basket.filter(b => !bought.includes(b));
   save(); render(); toast(`放进冰箱 ${bought.length} 样`);
 }
@@ -1305,7 +1361,7 @@ document.addEventListener('click', e => {
     const name = ($('#s-name')?.value || '').trim();
     if (!name) return toast('食材名不能空');
     const storage = $('#s-storage').value;
-    const expire = $('#s-expire').value || addDays(todayStr(), shelfLife(storage));
+    const expire = $('#s-expire').value || addDays(todayStr(), shelfLife({ name, storage }));
     const old = findIng(name);
     if (old) {
       if (expire) old.expire = expire;
