@@ -2,7 +2,7 @@
    数据全部存在浏览器 localStorage，换设备/清缓存会丢。 */
 
 const KEY = 'diancai_v1';
-const DATA_VER = 11;
+const DATA_VER = 12;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -293,7 +293,26 @@ function defaultState() {
         steps: '1. 排骨冷水下锅，加姜片、1 勺料酒焯水，捞出冲净\n2. 锅里 1 勺油，下 20 克冰糖小火炒到冒小泡\n3. 倒排骨翻匀上色，加 2 勺生抽、姜片，加水没过\n4. 小火焖 25 分钟，最后加半勺盐收汁，撒葱花' },
       { id: 'd69', name: '烤排骨', cat: 'air', emoji: '🍖', pending: false,
         ingredients: [{ name: '排骨', qty: 300, unit: '克' }, { name: '生抽', qty: 2, unit: '勺' }, { name: '料酒', qty: 1, unit: '勺' }, { name: '蒜', qty: 3, unit: '瓣' }, { name: '盐', qty: 1, unit: '勺' }, { name: '孜然粉', qty: 1, unit: '瓶' }],
-        steps: '1. 排骨用 2 勺生抽、1 勺料酒、半勺盐、蒜末腌 40 分钟\n2. 铺锡纸，200℃ 烤 20 分钟\n3. 翻面再烤 8 分钟，出炉撒孜然粉' }
+        steps: '1. 排骨用 2 勺生抽、1 勺料酒、半勺盐、蒜末腌 40 分钟\n2. 铺锡纸，200℃ 烤 20 分钟\n3. 翻面再烤 8 分钟，出炉撒孜然粉' },
+      /* 她说鸡翅鸡腿多来点，11-19 补的 */
+      { id: 'd70', name: '照烧鸡腿', cat: 'meat', emoji: '🍗', pending: false,
+        ingredients: [{ name: '鸡腿', qty: 2, unit: '个' }, { name: '生抽', qty: 2, unit: '勺' }, { name: '料酒', qty: 1, unit: '勺' }, { name: '蜂蜜', qty: 1, unit: '勺' }, { name: '姜', qty: 1, unit: '块' }, { name: '食用油', qty: 1, unit: '勺' }],
+        steps: '1. 鸡腿去骨（不去也行）摊平，用 1 勺生抽、1 勺料酒、姜片腌 15 分钟\n2. 少油下锅，皮朝下小火煎 5 分钟，翻面再煎 3 分钟\n3. 倒 1 勺生抽、1 勺蜂蜜，收汁到发亮' },
+      { id: 'd71', name: '凉拌鸡丝', cat: 'meat', emoji: '🍗', pending: false,
+        ingredients: [{ name: '鸡腿', qty: 2, unit: '个' }, { name: '姜', qty: 1, unit: '块' }, { name: '葱', qty: 1, unit: '根' }, { name: '蒜', qty: 2, unit: '瓣' }, { name: '生抽', qty: 1, unit: '勺' }, { name: '醋', qty: 1, unit: '勺' }, { name: '辣椒酱', qty: 1, unit: '勺' }, { name: '花椒油', qty: 1, unit: '勺' }],
+        steps: '1. 鸡腿加姜片煮 15 分钟，捞出放凉撕成丝\n2. 调汁：1 勺生抽、1 勺醋、1 勺辣椒酱、蒜末、几滴花椒油\n3. 淋上拌匀，撒葱花' },
+      { id: 'd72', name: '鸡枞菇焖鸡腿', cat: 'meat', emoji: '🍄', pending: false,
+        ingredients: [{ name: '鸡腿', qty: 2, unit: '个' }, { name: '鸡枞菇', qty: 1, unit: '盒' }, { name: '姜', qty: 1, unit: '块' }, { name: '蒜', qty: 2, unit: '瓣' }, { name: '生抽', qty: 1, unit: '勺' }, { name: '料酒', qty: 1, unit: '勺' }, { name: '盐', qty: 1, unit: '勺' }, { name: '食用油', qty: 1, unit: '勺' }],
+        steps: '1. 鸡腿剁块，加姜片、1 勺料酒焯 3 分钟\n2. 热油下姜蒜炒香，倒鸡块炒到表面收紧\n3. 加 1 勺生抽、半碗水，焖 15 分钟\n4. 下撕好的鸡枞菇再焖 5 分钟，加半勺盐' },
+      { id: 'd73', name: '香煎鸡翅', cat: 'meat', emoji: '🍗', pending: false,
+        ingredients: [{ name: '鸡翅', qty: 6, unit: '个' }, { name: '生抽', qty: 1, unit: '勺' }, { name: '料酒', qty: 1, unit: '勺' }, { name: '蒜', qty: 2, unit: '瓣' }, { name: '盐', qty: 1, unit: '勺' }, { name: '食用油', qty: 1, unit: '勺' }],
+        steps: '1. 鸡翅两面划刀，用 1 勺生抽、1 勺料酒、半勺盐、蒜末腌 20 分钟\n2. 少油小火，鸡翅下锅煎 5 分钟\n3. 翻面再煎 4 分钟，皮焦黄就好' },
+      { id: 'd74', name: '番茄鸡翅', cat: 'meat', emoji: '🍅', pending: false,
+        ingredients: [{ name: '鸡翅', qty: 6, unit: '个' }, { name: '番茄', qty: 2, unit: '个' }, { name: '姜', qty: 1, unit: '块' }, { name: '料酒', qty: 1, unit: '勺' }, { name: '生抽', qty: 1, unit: '勺' }, { name: '盐', qty: 1, unit: '勺' }, { name: '食用油', qty: 1, unit: '勺' }],
+        steps: '1. 鸡翅划刀焯水，加姜片、1 勺料酒去腥\n2. 少油把番茄炒出汁\n3. 下鸡翅，加 1 勺生抽和小半碗水，焖 12 分钟\n4. 加半勺盐，收汁' },
+      { id: 'd75', name: '柠檬鸡翅', cat: 'air', emoji: '🍋', pending: false,
+        ingredients: [{ name: '鸡翅', qty: 6, unit: '个' }, { name: '柠檬', qty: 1, unit: '个' }, { name: '蜂蜜', qty: 1, unit: '勺' }, { name: '生抽', qty: 1, unit: '勺' }, { name: '盐', qty: 1, unit: '勺' }],
+        steps: '1. 鸡翅划刀，用半个柠檬的汁、1 勺生抽、半勺盐、1 勺蜂蜜腌 30 分钟\n2. 180℃ 烤 15 分钟\n3. 翻面再烤 8 分钟，出炉挤点剩下的柠檬汁' }
     ],
     cart: [],
     orders: [],
@@ -471,6 +490,13 @@ function load() {
         // v11：给她补两道排骨的菜
         if (v < 11) {
           ['d68', 'd69'].forEach(id => {
+            const x = d.dishes.find(y => y.id === id);
+            if (x && !m.dishes.some(y => y.name === x.name)) m.dishes.push(x);
+          });
+        }
+        // v12：鸡翅鸡腿再加几道
+        if (v < 12) {
+          ['d70', 'd71', 'd72', 'd73', 'd74', 'd75'].forEach(id => {
             const x = d.dishes.find(y => y.id === id);
             if (x && !m.dishes.some(y => y.name === x.name)) m.dishes.push(x);
           });
