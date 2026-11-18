@@ -2,7 +2,7 @@
    数据全部存在浏览器 localStorage，换设备/清缓存会丢。 */
 
 const KEY = 'diancai_v1';
-const DATA_VER = 10;
+const DATA_VER = 11;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -286,7 +286,14 @@ function defaultState() {
         steps: '梨去皮去核切块，加 30 克冰糖和水没过，小火炖 30 分钟，热吃凉吃都行' },
       { id: 'd67', name: '烤鸡腿', cat: 'air', emoji: '🍗', pending: false,
         ingredients: [{ name: '鸡腿', qty: 2, unit: '个' }, { name: '生抽', qty: 1, unit: '勺' }, { name: '料酒', qty: 1, unit: '勺' }, { name: '盐', qty: 1, unit: '勺' }, { name: '蒜', qty: 2, unit: '瓣' }],
-        steps: '1. 鸡腿划几刀，用 1 勺生抽、1 勺料酒、半勺盐、蒜末腌 30 分钟\n2. 190℃ 烤 20 分钟\n3. 翻面再烤 8 分钟，筷子戳不出血水就熟' }
+        steps: '1. 鸡腿划几刀，用 1 勺生抽、1 勺料酒、半勺盐、蒜末腌 30 分钟\n2. 190℃ 烤 20 分钟\n3. 翻面再烤 8 分钟，筷子戳不出血水就熟' },
+      /* 她爱吃排骨，11-19 补的 */
+      { id: 'd68', name: '红烧排骨', cat: 'meat', emoji: '🍖', pending: false,
+        ingredients: [{ name: '排骨', qty: 300, unit: '克' }, { name: '姜', qty: 1, unit: '块' }, { name: '葱', qty: 1, unit: '根' }, { name: '生抽', qty: 2, unit: '勺' }, { name: '料酒', qty: 1, unit: '勺' }, { name: '冰糖', qty: 20, unit: '克' }, { name: '盐', qty: 1, unit: '勺' }, { name: '食用油', qty: 1, unit: '勺' }],
+        steps: '1. 排骨冷水下锅，加姜片、1 勺料酒焯水，捞出冲净\n2. 锅里 1 勺油，下 20 克冰糖小火炒到冒小泡\n3. 倒排骨翻匀上色，加 2 勺生抽、姜片，加水没过\n4. 小火焖 25 分钟，最后加半勺盐收汁，撒葱花' },
+      { id: 'd69', name: '烤排骨', cat: 'air', emoji: '🍖', pending: false,
+        ingredients: [{ name: '排骨', qty: 300, unit: '克' }, { name: '生抽', qty: 2, unit: '勺' }, { name: '料酒', qty: 1, unit: '勺' }, { name: '蒜', qty: 3, unit: '瓣' }, { name: '盐', qty: 1, unit: '勺' }, { name: '孜然粉', qty: 1, unit: '瓶' }],
+        steps: '1. 排骨用 2 勺生抽、1 勺料酒、半勺盐、蒜末腌 40 分钟\n2. 铺锡纸，200℃ 烤 20 分钟\n3. 翻面再烤 8 分钟，出炉撒孜然粉' }
     ],
     cart: [],
     orders: [],
@@ -459,6 +466,13 @@ function load() {
           const fresh = ['d62', 'd63', 'd64', 'd65', 'd66', 'd67'];
           d.dishes.filter(x => fresh.includes(x.id)).forEach(x => {
             if (!m.dishes.some(y => y.name === x.name)) m.dishes.push(x);
+          });
+        }
+        // v11：给她补两道排骨的菜
+        if (v < 11) {
+          ['d68', 'd69'].forEach(id => {
+            const x = d.dishes.find(y => y.id === id);
+            if (x && !m.dishes.some(y => y.name === x.name)) m.dishes.push(x);
           });
         }
       }
