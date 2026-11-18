@@ -2,7 +2,7 @@
    数据全部存在浏览器 localStorage，换设备/清缓存会丢。 */
 
 const KEY = 'diancai_v1';
-const DATA_VER = 9;
+const DATA_VER = 10;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -27,7 +27,7 @@ const SHELF_DAYS = {
   '鸡蛋': 21, '酸奶': 21,
   '维他奶': 180, '椰汁': 180, '大米': 180, '面条': 180, '酸菜': 180,
   '香蕉': 5, '柿子': 7, '番茄': 5, '玉米': 5, '鸡枞菇': 5,
-  '苹果': 14, '豆干': 7,
+  '苹果': 14, '梨': 14, '湿粉丝': 7, '豆干': 7,
   '土豆': 30, '南瓜': 30, '蜜薯': 30, '沙葛': 30
 };
 function shelfLife(item) {
@@ -267,7 +267,26 @@ function defaultState() {
         steps: '馒头切片，两面刷薄薄一层油，180℃ 烤 6 分钟，外脆里软' },
       { id: 'd61', name: '烤土豆角', cat: 'air', emoji: '🥔', pending: false,
         ingredients: [{ name: '土豆', qty: 1, unit: '个' }, { name: '孜然粉', qty: 1, unit: '瓶' }, { name: '食用油', qty: 1, unit: '勺' }, { name: '盐', qty: 1, unit: '勺' }],
-        steps: '土豆切角，拌 1 勺油、孜然粉、半勺盐，200℃ 烤 18 分钟' }
+        steps: '土豆切角，拌 1 勺油、孜然粉、半勺盐，200℃ 烤 18 分钟' },
+      /* 按 2026-11-19 买菜带回来的食材加的 */
+      { id: 'd62', name: '香煎牛排', cat: 'meat', emoji: '🥩', pending: false,
+        ingredients: [{ name: '牛排', qty: 1, unit: '块' }, { name: '食用油', qty: 1, unit: '勺' }, { name: '盐', qty: 1, unit: '勺' }, { name: '白胡椒粉', qty: 1, unit: '瓶' }],
+        steps: '1. 牛排提前 20 分钟拿出来回温，厨房纸吸干表面水\n2. 锅烧热倒 1 勺油，一面煎 2 分钟翻面再煎 2 分钟\n3. 出锅撒半勺盐、一点白胡椒粉，静置 3 分钟再切' },
+      { id: 'd63', name: '酸汤肥牛', cat: 'meat', emoji: '🍲', pending: false,
+        ingredients: [{ name: '肥牛卷', qty: 1, unit: '袋' }, { name: '湿粉丝', qty: 1, unit: '袋' }, { name: '辣椒酱', qty: 1, unit: '勺' }, { name: '醋', qty: 1, unit: '勺' }, { name: '盐', qty: 1, unit: '勺' }, { name: '葱', qty: 1, unit: '根' }],
+        steps: '1. 水烧开，湿粉丝先煮 2 分钟捞出\n2. 肥牛卷下锅一烫变色就捞（久了会老）\n3. 碗底放 1 勺辣椒酱、1 勺醋、半勺盐，舀一勺热汤冲开，再把粉丝和肥牛放进去，撒葱花' },
+      { id: 'd64', name: '虾滑蒸蛋', cat: 'egg', emoji: '🍤', pending: false,
+        ingredients: [{ name: '虾滑', qty: 1, unit: '袋' }, { name: '鸡蛋', qty: 2, unit: '个' }, { name: '生抽', qty: 1, unit: '勺' }, { name: '盐', qty: 1, unit: '勺' }, { name: '葱', qty: 1, unit: '根' }],
+        steps: '1. 2 个蛋加半勺盐打散，加 1.5 倍温水搅匀撇掉浮沫\n2. 虾滑挤成小段放进去\n3. 水开蒸 12 分钟，出锅淋 1 勺生抽、撒葱花' },
+      { id: 'd65', name: '辣椒炒蛋', cat: 'egg', emoji: '🌶️', pending: false,
+        ingredients: [{ name: '辣椒', qty: 1, unit: '把' }, { name: '鸡蛋', qty: 3, unit: '个' }, { name: '食用油', qty: 1, unit: '勺' }, { name: '盐', qty: 1, unit: '勺' }, { name: '生抽', qty: 1, unit: '勺' }],
+        steps: '1. 辣椒切圈，蛋液加半勺盐打散\n2. 热油炒蛋到半凝固盛出\n3. 下辣椒大火炒 1 分钟，倒回鸡蛋，加半勺盐、淋几滴生抽翻匀' },
+      { id: 'd66', name: '冰糖炖梨', cat: 'drink', emoji: '🍐', pending: false,
+        ingredients: [{ name: '梨', qty: 1, unit: '个' }, { name: '冰糖', qty: 30, unit: '克' }],
+        steps: '梨去皮去核切块，加 30 克冰糖和水没过，小火炖 30 分钟，热吃凉吃都行' },
+      { id: 'd67', name: '烤鸡腿', cat: 'air', emoji: '🍗', pending: false,
+        ingredients: [{ name: '鸡腿', qty: 2, unit: '个' }, { name: '生抽', qty: 1, unit: '勺' }, { name: '料酒', qty: 1, unit: '勺' }, { name: '盐', qty: 1, unit: '勺' }, { name: '蒜', qty: 2, unit: '瓣' }],
+        steps: '1. 鸡腿划几刀，用 1 勺生抽、1 勺料酒、半勺盐、蒜末腌 30 分钟\n2. 190℃ 烤 20 分钟\n3. 翻面再烤 8 分钟，筷子戳不出血水就熟' }
     ],
     cart: [],
     orders: [],
@@ -313,7 +332,19 @@ function defaultState() {
       { id: 'f37', name: '淀粉', qty: 1, unit: '', storage: '常温', cat: '配菜', expire: '' },
       { id: 'f38', name: '蚝油', qty: 1, unit: '', storage: '常温', cat: '配菜', expire: '' },
       { id: 'f39', name: '花椒粉', qty: 1, unit: '', storage: '常温', cat: '配菜', expire: '' },
-      { id: 'f40', name: '鸡精', qty: 1, unit: '', storage: '常温', cat: '配菜', expire: '' }
+      { id: 'f40', name: '鸡精', qty: 1, unit: '', storage: '常温', cat: '配菜', expire: '' },
+      /* 按 2026-11-19 买回来的（鸡蛋本来就有，这里不再加） */
+      { id: 'f42', name: '葱', qty: 1, unit: '把', storage: '冷藏', cat: '配菜', expire: addDays(t, 7) },
+      { id: 'f43', name: '姜', qty: 1, unit: '块', storage: '常温', cat: '配菜', expire: addDays(t, 60) },
+      { id: 'f44', name: '辣椒', qty: 1, unit: '把', storage: '冷藏', cat: '配菜', expire: addDays(t, 7) },
+      { id: 'f45', name: '牛排', qty: 1, unit: '块', storage: '冷冻', cat: '肉禽蛋', expire: addDays(t, 90) },
+      { id: 'f46', name: '鸡腿', qty: 2, unit: '个', storage: '冷冻', cat: '肉禽蛋', expire: addDays(t, 90) },
+      { id: 'f47', name: '鸡翅', qty: 6, unit: '个', storage: '冷冻', cat: '肉禽蛋', expire: addDays(t, 90) },
+      { id: 'f48', name: '排骨', qty: 1, unit: '块', storage: '冷冻', cat: '肉禽蛋', expire: addDays(t, 90) },
+      { id: 'f49', name: '梨', qty: 3, unit: '个', storage: '常温', cat: '果饮', expire: addDays(t, 14) },
+      { id: 'f50', name: '虾滑', qty: 1, unit: '袋', storage: '冷冻', cat: '海鲜', expire: addDays(t, 90) },
+      { id: 'f51', name: '湿粉丝', qty: 1, unit: '袋', storage: '冷藏', cat: '主食', expire: addDays(t, 7) },
+      { id: 'f52', name: '肥牛卷', qty: 1, unit: '袋', storage: '冷冻', cat: '肉禽蛋', expire: addDays(t, 90) }
     ],
     requests: []
   };
@@ -403,6 +434,31 @@ function load() {
           m.fridge.forEach(x => {
             x.bought = x.expire ? addDays(x.expire, -shelfLife(x)) : '2026-11-15';
             if (!x.expire) x.expire = addDays(x.bought, shelfLife(x));
+          });
+        }
+        // v10：11-19 又去买菜了，把这些补进冰箱，再补上给新食材配的菜
+        if (v < 10) {
+          const bought = '2026-11-19';
+          [
+            ['葱', '把', '冷藏', '配菜'],
+            ['姜', '块', '常温', '配菜'],
+            ['辣椒', '把', '冷藏', '配菜'],
+            ['牛排', '块', '冷冻', '肉禽蛋'],
+            ['鸡腿', '个', '冷冻', '肉禽蛋'],
+            ['鸡翅', '个', '冷冻', '肉禽蛋'],
+            ['排骨', '块', '冷冻', '肉禽蛋'],
+            ['梨', '个', '常温', '果饮'],
+            ['虾滑', '袋', '冷冻', '海鲜'],
+            ['湿粉丝', '袋', '冷藏', '主食'],
+            ['肥牛卷', '袋', '冷冻', '肉禽蛋']
+          ].forEach(([name, unit, storage, cat]) => {
+            if (!m.fridge.some(x => x.name === name)) {
+              m.fridge.push({ id: uid(), name, qty: 1, unit, storage, cat, bought, expire: addDays(bought, shelfLife({ name, storage, cat })) });
+            }
+          });
+          const fresh = ['d62', 'd63', 'd64', 'd65', 'd66', 'd67'];
+          d.dishes.filter(x => fresh.includes(x.id)).forEach(x => {
+            if (!m.dishes.some(y => y.name === x.name)) m.dishes.push(x);
           });
         }
       }
