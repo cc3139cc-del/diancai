@@ -2,7 +2,7 @@
    数据全部存在浏览器 localStorage，换设备/清缓存会丢。 */
 
 const KEY = 'diancai_v1';
-const DATA_VER = 15;
+const DATA_VER = 16;
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const uid = () => Math.random().toString(36).slice(2, 9);
@@ -28,7 +28,8 @@ const SHELF_DAYS = {
   '维他奶': 180, '椰汁': 180, '大米': 180, '面条': 180, '酸菜': 180,
   '香蕉': 5, '柿子': 7, '番茄': 5, '玉米': 5, '鸡枞菇': 5,
   '苹果': 14, '梨': 14, '湿粉丝': 7, '豆干': 7,
-  '土豆': 30, '南瓜': 30, '蜜薯': 30, '沙葛': 30
+  '土豆': 30, '南瓜': 30, '蜜薯': 30, '沙葛': 30, '紫薯': 30,
+  '脐橙': 14, '西兰花': 5, '上海青': 3
 };
 function shelfLife(item) {
   const { name = '', storage = '常温', cat = '' } = item || {};
@@ -312,7 +313,23 @@ function defaultState() {
         steps: '1. 鸡翅 6 个划刀，姜 3 片，番茄 2 个切块（可烫皮）\n2. 焯水：鸡翅冷水下锅，加姜片、1 汤勺料酒，烧开后再煮 2 分钟，捞出冲净\n3. 锅擦干倒 1 汤勺油，最大档，下番茄炒 3 分钟压出汁\n4. 下鸡翅翻炒 1 分钟，加 1 汤勺生抽、小半碗热水\n5. 盖盖最小档焖 12 分钟\n6. 开盖加半小勺盐，最大档收汁 3 分钟，汁裹住鸡翅' },
       { id: 'd75', name: '柠檬鸡翅', cat: 'air', emoji: '🍋', pending: false,
         ingredients: [{ name: '鸡翅', qty: 6, unit: '个' }, { name: '柠檬', qty: 1, unit: '个' }, { name: '蜂蜜', qty: 1, unit: '勺' }, { name: '生抽', qty: 1, unit: '勺' }, { name: '盐', qty: 1, unit: '勺' }],
-        steps: '1. 鸡翅 6 个划刀擦干；柠檬 1 个：半个挤汁，半个切片\n2. 腌：柠檬汁、1 汤勺生抽、半小勺盐、1 汤勺蜂蜜，抓匀腌 30 分钟\n3. 180℃ 烤 15 分钟\n4. 翻面铺上柠檬片，再烤 8 分钟\n5. 出炉再挤几滴柠檬汁；柠檬片烤久了会苦，第 18 分钟可以先拿掉' }
+        steps: '1. 鸡翅 6 个划刀擦干；柠檬 1 个：半个挤汁，半个切片\n2. 腌：柠檬汁、1 汤勺生抽、半小勺盐、1 汤勺蜂蜜，抓匀腌 30 分钟\n3. 180℃ 烤 15 分钟\n4. 翻面铺上柠檬片，再烤 8 分钟\n5. 出炉再挤几滴柠檬汁；柠檬片烤久了会苦，第 18 分钟可以先拿掉' },
+      /* 11-23 买了西兰花、上海青、紫薯、蒜头、脐橙，配的菜 */
+      { id: 'd76', name: '蒜蓉西兰花', cat: 'veg', emoji: '🥦', pending: false,
+        ingredients: [{ name: '西兰花', qty: 1, unit: '个' }, { name: '蒜', qty: 2, unit: '瓣' }, { name: '生抽', qty: 1, unit: '勺' }, { name: '盐', qty: 1, unit: '勺' }, { name: '食用油', qty: 1, unit: '勺' }],
+        steps: '1. 西兰花 1 个切小朵，用淡盐水泡 5 分钟再冲干净（花缝里容易藏灰）\n2. 蒜 2 瓣切末\n3. 锅里烧开水，下西兰花煮 1 分钟捞出（水里加半小勺盐，颜色更绿）\n4. 锅擦干倒 1 汤勺油，最大档，下蒜末炒 10 秒出香味，别炒糊\n5. 倒西兰花翻炒 2 分钟\n6. 加半小勺盐、淋几滴生抽，翻匀出锅' },
+      { id: 'd77', name: '蒜蓉上海青', cat: 'veg', emoji: '🥬', pending: false,
+        ingredients: [{ name: '上海青', qty: 1, unit: '把' }, { name: '蒜', qty: 2, unit: '瓣' }, { name: '食用油', qty: 1, unit: '勺' }, { name: '盐', qty: 1, unit: '勺' }],
+        steps: '1. 上海青 1 把掰开叶子，冲洗干净沥干水（带水下锅会溅油）\n2. 蒜 2 瓣切末\n3. 锅擦干倒 1 汤勺油，最大档，下蒜末炒 10 秒\n4. 先下菜梗炒 30 秒，再下叶子\n5. 翻炒 1–2 分钟，叶子塌下去就熟了\n6. 加半小勺盐翻匀马上出锅，炒久了发黄出水' },
+      { id: 'd79', name: '紫薯酸奶碗', cat: 'main', emoji: '🍠', pending: false,
+        ingredients: [{ name: '紫薯', qty: 1, unit: '个' }, { name: '酸奶', qty: 1, unit: '袋' }],
+        steps: '1. 紫薯 1 个削皮切块，蒸锅水开上锅蒸 20 分钟（电煮锅隔水蒸也行）\n2. 判断熟：筷子一戳就透\n3. 压成泥，想细腻就加两勺酸奶一起压\n4. 装碗，浇上剩下的酸奶\n5. 冷藏 10 分钟更好吃；不用放糖，紫薯自己就甜' },
+      { id: 'd80', name: '橙香酸奶杯', cat: 'drink', emoji: '🍊', pending: false,
+        ingredients: [{ name: '脐橙', qty: 1, unit: '个' }, { name: '酸奶', qty: 1, unit: '袋' }],
+        steps: '1. 脐橙 1 个对半切，半个挤汁，半个剥出果肉撕成小块\n2. 酸奶 1 袋倒进杯子里\n3. 加橙汁搅匀，放上橙肉\n4. 冷藏 10 分钟\n5. 不用加糖' },
+      { id: 'd81', name: '西兰花炒鸡腿', cat: 'meat', emoji: '🥦', pending: false,
+        ingredients: [{ name: '西兰花', qty: 1, unit: '个' }, { name: '鸡腿', qty: 1, unit: '个' }, { name: '蒜', qty: 2, unit: '瓣' }, { name: '生抽', qty: 1, unit: '勺' }, { name: '料酒', qty: 1, unit: '勺' }, { name: '盐', qty: 1, unit: '勺' }, { name: '食用油', qty: 1, unit: '勺' }],
+        steps: '1. 鸡腿 1 个去骨切小块（不会去骨就带骨剁小），加 1 汤勺料酒、半小勺盐抓匀腌 10 分钟\n2. 西兰花切小朵，蒜 2 瓣切末\n3. 西兰花焯水 1 分钟捞出\n4. 锅擦干倒 1 汤勺油，最大档，下鸡腿肉炒 4 分钟，炒到变白收紧\n5. 下蒜末炒 10 秒，再倒西兰花翻炒 1 分钟\n6. 加 1 汤勺生抽、半小勺盐，翻匀出锅\n7. 判断熟：鸡肉切开里面没有粉色' }
     ],
     cart: [],
     orders: [],
@@ -369,7 +386,13 @@ function defaultState() {
       { id: 'f48', name: '排骨', qty: 1, unit: '块', storage: '冷冻', cat: '肉禽蛋', expire: addDays(t, 90) },
       { id: 'f49', name: '梨', qty: 3, unit: '个', storage: '常温', cat: '果饮', expire: addDays(t, 14) },
       { id: 'f50', name: '虾滑', qty: 1, unit: '袋', storage: '冷冻', cat: '海鲜', expire: addDays(t, 90) },
-      { id: 'f51', name: '湿粉丝', qty: 1, unit: '袋', storage: '冷藏', cat: '主食', expire: addDays(t, 7) }
+      { id: 'f51', name: '湿粉丝', qty: 1, unit: '袋', storage: '冷藏', cat: '主食', expire: addDays(t, 7) },
+      /* 按 2026-11-23 晚福乐购小票补的（酸奶、鸡腿、香蕉、玉米、柿子、蜜薯冰箱里已有，不再重复加） */
+      { id: 'f52', name: '紫薯', qty: 1, unit: '个', storage: '常温', cat: '瓜豆', expire: addDays(t, 30) },
+      { id: 'f53', name: '蒜', qty: 1, unit: '个', storage: '常温', cat: '配菜', expire: addDays(t, 60) },
+      { id: 'f54', name: '西兰花', qty: 1, unit: '个', storage: '冷藏', cat: '叶菜', expire: addDays(t, 5) },
+      { id: 'f55', name: '上海青', qty: 1, unit: '把', storage: '冷藏', cat: '叶菜', expire: addDays(t, 3) },
+      { id: 'f56', name: '脐橙', qty: 3, unit: '个', storage: '常温', cat: '果饮', expire: addDays(t, 14) }
     ],
     requests: []
   };
@@ -398,7 +421,7 @@ function load() {
           .map(x => valid.has(x.cat) ? x : { ...x, cat: 'other' });
         m.dishes = [...d.dishes, ...mine];
         m.categories = d.categories;
-        m.cart = [];
+        /* 菜篮（购物车）不再清空：新版只是往后加菜，旧的菜 id 都还在 */
         m.orders = (s.orders || []).map(o => ({
           ...o, items: (o.items || []).map(it => ({ ...it, dishId: '' }))
         }));
@@ -548,6 +571,25 @@ function load() {
           d.dishes.forEach(x => { byId[x.id] = x; });
           m.dishes.forEach(x => {
             if (byId[x.id]) x.steps = byId[x.id].steps;
+          });
+        }
+        // v16：11-23 买了新食材，只往后补冰箱和菜，不动已有的一行
+        if (v < 16) {
+          const bought = '2026-11-23';
+          [
+            ['紫薯', '个', '常温', '瓜豆'],
+            ['蒜', '个', '常温', '配菜'],
+            ['西兰花', '个', '冷藏', '叶菜'],
+            ['上海青', '把', '冷藏', '叶菜'],
+            ['脐橙', '个', '常温', '果饮']
+          ].forEach(([name, unit, storage, cat]) => {
+            if (!m.fridge.some(x => x.name === name)) {
+              m.fridge.push({ id: uid(), name, qty: 1, unit, storage, cat, bought, expire: addDays(bought, shelfLife({ name, storage, cat })) });
+            }
+          });
+          ['d76', 'd77', 'd79', 'd80', 'd81'].forEach(id => {
+            const x = d.dishes.find(y => y.id === id);
+            if (x && !m.dishes.some(y => y.name === x.name)) m.dishes.push(x);
           });
         }
       }
